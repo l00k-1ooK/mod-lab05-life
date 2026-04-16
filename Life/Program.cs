@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
 using System.Threading;
 
 namespace cli_life
@@ -25,6 +26,13 @@ namespace cli_life
             IsAlive = IsAliveNext;
         }
     }
+    public class BoardSettings
+    {
+        public int Width { get; set; } = 50;
+        public int Height { get; set; } = 20;
+        public int CellSize { get; set; } = 1;
+        public double LiveDensity { get; set; } = 0.5;
+    }
     public class Board
     {
         public readonly Cell[,] Cells;
@@ -35,15 +43,14 @@ namespace cli_life
         public int Width { get { return Columns * CellSize; } }
         public int Height { get { return Rows * CellSize; } }
 
-        public Board(int width, int height, int cellSize, double liveDensity = .1)
+        public Board(int width, int height, int cellSize,
+            double liveDensity = 0.1)
         {
             CellSize = cellSize;
-
             Cells = new Cell[width / cellSize, height / cellSize];
             for (int x = 0; x < Columns; x++)
                 for (int y = 0; y < Rows; y++)
                     Cells[x, y] = new Cell();
-
             ConnectNeighbors();
             Randomize(liveDensity);
         }
@@ -54,13 +61,93 @@ namespace cli_life
             foreach (var cell in Cells)
                 cell.IsAlive = rand.NextDouble() < liveDensity;
         }
-
         public void Advance()
         {
             foreach (var cell in Cells)
                 cell.DetermineNextLiveState();
             foreach (var cell in Cells)
                 cell.Advance();
+        }
+        public int CountAlive()
+        {
+            int count = 0;
+            foreach (var cell in Cells)
+                if (cell.IsAlive) count++;
+            return count;
+        }
+        public int CountGroups()
+        {
+            bool[,] visited = new bool[Columns, Rows];
+            int groups = 0;
+            for (int x = 0; x < Columns; x++)
+            {
+                for (int y = 0; y < Rows; y++)
+                {
+                    if (Cells[x, y].IsAlive && !visited[x, y])
+                    {
+                        FloodFill(x, y, visited);
+                        groups++;
+                    }
+                }
+            }
+            return groups;
+        }
+        private void FloodFill(int x, int y, bool[,] visited)
+        {
+            if (x < 0 || x >= Columns || y < 0 || y >= Rows)
+                return;
+            if (visited[x, y] || !Cells[x, y].IsAlive)
+                return;
+            visited[x, y] = true;
+            FloodFill(x - 1, y, visited);
+            FloodFill(x + 1, y, visited);
+            FloodFill(x, y - 1, visited);
+            FloodFill(x, y + 1, visited);
+            FloodFill(x - 1, y - 1, visited);
+            FloodFill(x + 1, y - 1, visited);
+            FloodFill(x - 1, y + 1, visited);
+            FloodFill(x + 1, y + 1, visited);
+        }
+        public void SaveToFile(string path)
+        {
+            var sb = new StringBuilder();
+            for (int row = 0; row < Rows; row++)
+            {
+                for (int col = 0; col < Columns; col++)
+                    sb.Append(Cells[col, row].IsAlive ? '*' : ' ');
+                sb.AppendLine();
+            }
+            File.WriteAllText(path, sb.ToString());
+        }
+        public void LoadFromFile(string path)
+        {
+            var lines = File.ReadAllLines(path);
+            for (int row = 0; row < Rows && row < lines.Length; row++)
+            {
+                for (int col = 0; col < Columns
+                    && col < lines[row].Length; col++)
+                {
+                    Cells[col, row].IsAlive = lines[row][col] == '*';
+                }
+            }
+        }
+        public int GenerationsToStable(int windowSize = 10)
+        {
+            var history = new Queue<int>();
+            int gen = 0;
+            while (true)
+            {
+                int alive = CountAlive();
+                history.Enqueue(alive);
+                if (history.Count > windowSize)
+                    history.Dequeue();
+                if (history.Count == windowSize
+                    && history.Max() == history.Min())
+                    return gen;
+                Advance();
+                gen++;
+                if (gen > 2000) return gen;
+            }
         }
         private void ConnectNeighbors()
         {
@@ -70,7 +157,6 @@ namespace cli_life
                 {
                     int xL = (x > 0) ? x - 1 : Columns - 1;
                     int xR = (x < Columns - 1) ? x + 1 : 0;
-
                     int yT = (y > 0) ? y - 1 : Rows - 1;
                     int yB = (y < Rows - 1) ? y + 1 : 0;
 
@@ -89,42 +175,104 @@ namespace cli_life
     class Program
     {
         static Board board;
-        static private void Reset()
+        static BoardSettings settings;
+
+        static void LoadSettings(string path = "settings.json")
+        {
+            if (File.Exists(path))
+            {
+                var json = File.ReadAllText(path);
+                settings = JsonSerializer.Deserialize<BoardSettings>(json)
+                    ?? new BoardSettings();
+            }
+            else
+            {
+                settings = new BoardSettings();
+                var json = JsonSerializer.Serialize(settings,
+                    new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(path, json);
+            }
+        }
+        static void Reset()
         {
             board = new Board(
-                width: 50,
-                height: 20,
-                cellSize: 1,
-                liveDensity: 0.5);
+                width: settings.Width,
+                height: settings.Height,
+                cellSize: settings.CellSize,
+                liveDensity: settings.LiveDensity);
         }
         static void Render()
         {
             for (int row = 0; row < board.Rows; row++)
             {
-                for (int col = 0; col < board.Columns; col++)   
+                for (int col = 0; col < board.Columns; col++)
                 {
                     var cell = board.Cells[col, row];
-                    if (cell.IsAlive)
-                    {
-                        Console.Write('*');
-                    }
-                    else
-                    {
-                        Console.Write(' ');
-                    }
+                    Console.Write(cell.IsAlive ? '*' : ' ');
                 }
                 Console.Write('\n');
             }
         }
+        static void RunResearch()
+        {
+            var densities = new double[]
+            {
+                0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
+            };
+            int attempts = 5;
+            var results = new List<string>();
+            results.Add("density\tavg_generations");
+            foreach (var density in densities)
+            {
+                int total = 0;
+                for (int i = 0; i < attempts; i++)
+                {
+                    var b = new Board(50, 20, 1, density);
+                    total += b.GenerationsToStable();
+                }
+                int avg = total / attempts;
+                results.Add($"{density:F1}\t{avg}");
+                Console.WriteLine($"Density {density:F1} -> avg {avg} gen");
+            }
+            Directory.CreateDirectory("Data");
+            File.WriteAllLines("Data/data.txt", results);
+            Console.WriteLine("Data saved to Data/data.txt");
+        }
         static void Main(string[] args)
         {
-            Reset();
-            while(true)
+            LoadSettings();
+            if (args.Length > 0 && args[0] == "--research")
+            {
+                RunResearch();
+                return;
+            }
+            if (args.Length > 0 && args[0] == "--load"
+                && args.Length > 1)
+            {
+                board = new Board(
+                    settings.Width, settings.Height,
+                    settings.CellSize);
+                board.LoadFromFile(args[1]);
+            }
+            else
+            {
+                Reset();
+            }
+            int generation = 0;
+            while (true)
             {
                 Console.Clear();
+                Console.WriteLine(
+                    $"Generation: {generation} " +
+                    $"Alive: {board.CountAlive()} " +
+                    $"Groups: {board.CountGroups()}");
                 Render();
+                if (generation % 10 == 0)
+                    board.SaveToFile($"Data/state_{generation}.txt");
+
                 board.Advance();
-                Thread.Sleep(1000);
+                generation++;
+                Thread.Sleep(100);
             }
         }
     }
