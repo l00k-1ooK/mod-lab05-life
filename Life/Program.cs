@@ -114,7 +114,7 @@ namespace cli_life
             for (int row = 0; row < Rows; row++)
             {
                 for (int col = 0; col < Columns; col++)
-                    sb.Append(Cells[col, row].IsAlive ? '*' : ' ');
+                    sb.Append(Cells[col, row].IsAlive ? '1' : '0');
                 sb.AppendLine();
             }
             File.WriteAllText(path, sb.ToString());
@@ -177,8 +177,16 @@ namespace cli_life
         static Board board;
         static BoardSettings settings;
 
-        static void LoadSettings(string path = "settings.json")
+        static readonly string DataDir = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "Data", "data"));
+
+        static void LoadSettings()
         {
+            string path = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                "..", "..", "..", "settings.json"));
+
             if (File.Exists(path))
             {
                 var json = File.ReadAllText(path);
@@ -231,16 +239,49 @@ namespace cli_life
                     total += b.GenerationsToStable();
                 }
                 int avg = total / attempts;
-                results.Add($"{density:F1}\t{avg}");
-                Console.WriteLine($"Density {density:F1} -> avg {avg} gen");
+                results.Add(
+                    $"{density:F1}\t{avg}".Replace(",", "."));
+                Console.WriteLine(
+                    $"Density {density:F1} -> avg {avg} gen");
             }
-            Directory.CreateDirectory("Data");
-            File.WriteAllLines("Data/data.txt", results);
-            Console.WriteLine("Data saved to Data/data.txt");
+
+            string dataDir = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                "..", "..", "..", "..", "Data"));
+            Directory.CreateDirectory(dataDir);
+
+            string dataFile = Path.Combine(dataDir, "data.txt");
+            File.WriteAllLines(dataFile, results);
+            Console.WriteLine($"Saved: {dataFile}");
+
+            var xs = new List<double>();
+            var ys = new List<double>();
+            foreach (var line in results.Skip(1))
+            {
+                var parts = line.Split('\t');
+                if (parts.Length == 2)
+                {
+                    xs.Add(double.Parse(parts[0],
+                        System.Globalization.CultureInfo.InvariantCulture));
+                    ys.Add(double.Parse(parts[1],
+                        System.Globalization.CultureInfo.InvariantCulture));
+                }
+            }
+
+            var plt = new ScottPlot.Plot(600, 400);
+            plt.AddScatter(xs.ToArray(), ys.ToArray());
+            plt.Title("Поколений до стабилизации");
+            plt.XLabel("Плотность заполнения");
+            plt.YLabel("Среднее число поколений");
+
+            string plotPath = Path.Combine(dataDir, "plot.png");
+            plt.SaveFig(plotPath);
+            Console.WriteLine($"Plot saved to {plotPath}");
         }
         static void Main(string[] args)
         {
             LoadSettings();
+            Directory.CreateDirectory(DataDir);
             if (args.Length > 0 && args[0] == "--research")
             {
                 RunResearch();
@@ -259,16 +300,57 @@ namespace cli_life
                 Reset();
             }
             int generation = 0;
+            int saveInterval = 10;
+            int stableWindow = 10;
+            var history = new Queue<int>();
             while (true)
             {
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(intercept: true).Key;
+                    if (key == ConsoleKey.Q || key == ConsoleKey.Escape)
+                    {
+                        Console.Clear();
+                        Console.WriteLine(
+                            $"Stopped manually at generation {generation}.");
+                        break;
+                    }
+                }
+
                 Console.Clear();
                 Console.WriteLine(
-                    $"Generation: {generation} " +
-                    $"Alive: {board.CountAlive()} " +
-                    $"Groups: {board.CountGroups()}");
+                    $"Generation: {generation} | " +
+                    $"Alive: {board.CountAlive()} | " +
+                    $"Groups: {board.CountGroups()} | " +
+                    $"Press Q to stop");
                 Render();
-                if (generation % 10 == 0)
-                    board.SaveToFile($"Data/state_{generation}.txt");
+
+                if (generation % saveInterval == 0)
+                {
+                    string statePath = Path.Combine(
+                        DataDir, $"state_{generation}.txt");
+                    board.SaveToFile(statePath);
+                }
+
+                int alive = board.CountAlive();
+                history.Enqueue(alive);
+                if (history.Count > stableWindow)
+                    history.Dequeue();
+
+                if (history.Count == stableWindow
+                    && history.Max() == history.Min())
+                {
+                    string finalPath = Path.Combine(
+                        DataDir, $"state_{generation}_final.txt");
+                    board.SaveToFile(finalPath);
+                    Console.Clear();
+                    Console.WriteLine(
+                        $"Stabilized at generation {generation}! " +
+                        $"Alive: {alive}");
+                    Console.WriteLine(
+                        $"Final state saved to {finalPath}");
+                    break;
+                }
 
                 board.Advance();
                 generation++;

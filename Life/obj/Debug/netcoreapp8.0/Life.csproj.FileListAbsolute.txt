@@ -1,0 +1,15 @@
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\bin\Debug\netcoreapp8.0\Life.exe
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\bin\Debug\netcoreapp8.0\Life.deps.json
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\bin\Debug\netcoreapp8.0\Life.runtimeconfig.json
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\bin\Debug\netcoreapp8.0\Life.dll
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\bin\Debug\netcoreapp8.0\Life.pdb
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\obj\Debug\netcoreapp8.0\Life.GeneratedMSBuildEditorConfig.editorconfig
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\obj\Debug\netcoreapp8.0\Life.AssemblyInfoInputs.cache
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\obj\Debug\netcoreapp8.0\Life.AssemblyInfo.cs
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\obj\Debug\netcoreapp8.0\Life.csproj.CoreCompileInputs.cache
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\obj\Debug\netcoreapp8.0\Life.sourcelink.json
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\obj\Debug\netcoreapp8.0\Life.dll
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\obj\Debug\netcoreapp8.0\refint\Life.dll
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\obj\Debug\netcoreapp8.0\Life.pdb
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\obj\Debug\netcoreapp8.0\Life.genruntimeconfig.cache
+E:\Лука\прога\4 курс\Моделирование информационных процессов и систем\mod-lab05-life\Life\obj\Debug\netcoreapp8.0\ref\Life.dll
