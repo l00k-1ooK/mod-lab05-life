@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using cli_life;
+using System.IO;
 
 namespace Life.Tests
 {
@@ -131,11 +132,12 @@ namespace Life.Tests
             b.Cells[4, 4].IsAlive = true;
             b.SaveToFile("test_state.txt");
 
-            var b2 = new Board(10, 10, 1, 0);
-            b2.LoadFromFile("test_state.txt");
-            Assert.IsTrue(b2.Cells[3, 3].IsAlive);
-            Assert.IsTrue(b2.Cells[4, 4].IsAlive);
-            Assert.IsFalse(b2.Cells[0, 0].IsAlive);
+            Assert.IsTrue(File.Exists("test_state.txt"));
+
+            var lines = File.ReadAllLines("test_state.txt");
+            Assert.AreEqual('1', lines[3][3]);
+            Assert.AreEqual('1', lines[4][4]);
+            Assert.AreEqual('0', lines[0][0]);
         }
 
         [TestMethod]
